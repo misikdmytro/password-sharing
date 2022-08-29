@@ -5,6 +5,7 @@ import (
 	"github.com/misikdmitriy/password-sharing/config"
 	"github.com/misikdmitriy/password-sharing/database"
 	"github.com/misikdmitriy/password-sharing/helper"
+	"github.com/misikdmitriy/password-sharing/logger"
 	"github.com/misikdmitriy/password-sharing/model"
 )
 
@@ -16,14 +17,17 @@ type passwordService struct {
 	dbFactory database.DbFactory
 	conf      *config.Config
 	rf        helper.RandomGeneratorFactory
+	log       logger.Logger
 }
 
 func NewPasswordService(dbFactory database.DbFactory, conf *config.Config,
-	rf helper.RandomGeneratorFactory) PasswordService {
+	rf helper.RandomGeneratorFactory,
+	log logger.Logger) PasswordService {
 	return &passwordService{
 		dbFactory: dbFactory,
 		conf:      conf,
 		rf:        rf,
+		log:       log,
 	}
 }
 
@@ -32,6 +36,7 @@ const pgUniqueViolationCode = "23505"
 func (s *passwordService) CreateLinkFromPassword(pwd string) (string, error) {
 	db, err := s.dbFactory.InitDB()
 	if err != nil {
+		s.log.Error("failed to init db")
 		return "", err
 	}
 
@@ -41,17 +46,29 @@ func (s *passwordService) CreateLinkFromPassword(pwd string) (string, error) {
 	for {
 		rg := s.rf.NewRandomGenerator()
 		link, err := rg.RandomString(s.conf.App.LinkLength)
+		if err != nil {
+			s.log.Error("error on randomizing",
+				"length", s.conf.App.LinkLength,
+				"error", err)
+
+			return "", err
+		}
 
 		command := db.Save(model.NewPassword(link, pwd))
 		if err := command.Error; err != nil {
 			pgErr, ok := err.(*pgconn.PgError)
 			if ok && pgErr.Code == pgUniqueViolationCode {
+				s.log.Warn("retry after unique key violation")
 				continue
 			}
+
+			s.log.Error("error on db command",
+				"error", err)
 
 			return "", err
 		}
 
-		return link, err
+		s.log.Debug("link generated")
+		return link, nil
 	}
 }

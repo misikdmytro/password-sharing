@@ -7,24 +7,30 @@ import (
 	"github.com/misikdmitriy/password-sharing/config"
 	"github.com/misikdmitriy/password-sharing/database"
 	"github.com/misikdmitriy/password-sharing/helper"
+	"github.com/misikdmitriy/password-sharing/logger"
 	"github.com/misikdmitriy/password-sharing/tests"
 )
 
-func TestCreateLinkFromPassword(t *testing.T) {
+func TestCreateLinkFromPasswordShouldDoIt(t *testing.T) {
 	c := config.CreateEmpty()
 	c.Database.ConnectionString = "inmemdb"
 	c.Database.Provider = "sqlite"
 
 	c.App.LinkLength = 8
 
-	dbf := database.NewFactory(c)
-	err := tests.MigrateDatabase(dbf)
+	log, err := logger.NewLogger()
+	if err != nil {
+		t.Error(err)
+	}
+
+	dbf := database.NewFactory(c, log)
+	err = tests.MigrateDatabase(dbf)
 	if err != nil {
 		t.Error(err)
 	}
 
 	rf := helper.NewRandomFactory()
-	s := NewPasswordService(dbf, c, rf)
+	s := NewPasswordService(dbf, c, rf, log)
 
 	result, err := s.CreateLinkFromPassword(uuid.New().String())
 	if err != nil {

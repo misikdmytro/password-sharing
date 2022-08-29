@@ -5,6 +5,7 @@ import (
 	"github.com/misikdmitriy/password-sharing/controller"
 	"github.com/misikdmitriy/password-sharing/database"
 	"github.com/misikdmitriy/password-sharing/helper"
+	"github.com/misikdmitriy/password-sharing/logger"
 	"github.com/misikdmitriy/password-sharing/server"
 	"github.com/misikdmitriy/password-sharing/service"
 )
@@ -15,10 +16,16 @@ func main() {
 		panic(err)
 	}
 
-	dbf := database.NewFactory(conf)
+	log, err := logger.NewLogger()
+	if err != nil {
+		panic(err)
+	}
+	defer log.Close()
+
+	dbf := database.NewFactory(conf, log)
 	rf := helper.NewRandomFactory()
-	service := service.NewPasswordService(dbf, conf, rf)
-	passwordController := controller.NewPasswordController(service)
+	service := service.NewPasswordService(dbf, conf, rf, log)
+	passwordController := controller.NewCreateLinkController(service)
 
 	server := server.NewServer(passwordController)
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/misikdmitriy/password-sharing/config"
+	"github.com/misikdmitriy/password-sharing/logger"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
@@ -15,23 +16,33 @@ type DbFactory interface {
 }
 
 type dbFactory struct {
-	c *config.Config
+	c   *config.Config
+	log logger.Logger
 }
 
-func NewFactory(conf *config.Config) DbFactory {
+func NewFactory(conf *config.Config, log logger.Logger) DbFactory {
 	return &dbFactory{
-		c: conf,
+		c:   conf,
+		log: log,
 	}
 }
 
 func (f *dbFactory) InitDB() (*gorm.DB, error) {
 	conn, err := f.createConnection()
 	if err != nil {
+		f.log.Error("cannot create db connection",
+			"provider", f.c.Database.Provider,
+			"error", err)
+
 		return nil, err
 	}
 
 	db, err := gorm.Open(*conn, &gorm.Config{})
 	if err != nil {
+		f.log.Error("cannot open gorm",
+			"provider", f.c.Database.Provider,
+			"error", err)
+
 		return nil, err
 	}
 
@@ -39,6 +50,9 @@ func (f *dbFactory) InitDB() (*gorm.DB, error) {
 }
 
 func (f *dbFactory) createConnection() (*gorm.Dialector, error) {
+	f.log.Debug("creating db connection",
+		"provider", f.c.Database.Provider)
+
 	switch f.c.Database.Provider {
 	case "pg":
 		conn := postgres.New(postgres.Config{
