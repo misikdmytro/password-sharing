@@ -25,9 +25,11 @@ func main() {
 	dbf := database.NewFactory(conf, log)
 	rf := helper.NewRandomFactory()
 	service := service.NewPasswordService(dbf, conf, rf, log)
-	passwordController := controller.NewCreateLinkController(service)
 
-	server := server.NewServer(passwordController)
+	server := server.NewServer(
+		controller.NewCreateLinkController(service),
+		controller.NewGetLinkController(service),
+	)
 
 	if err := server.Run(); err != nil {
 		panic(err)

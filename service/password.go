@@ -10,7 +10,8 @@ import (
 )
 
 type PasswordService interface {
-	CreateLinkFromPassword(pwd string) (string, error)
+	GetPasswordFromLink(string) (*string, error)
+	CreateLinkFromPassword(string) (string, error)
 }
 
 type passwordService struct {
@@ -71,4 +72,23 @@ func (s *passwordService) CreateLinkFromPassword(pwd string) (string, error) {
 		s.log.Debug("link generated")
 		return link, nil
 	}
+}
+
+func (s *passwordService) GetPasswordFromLink(link string) (*string, error) {
+	db, err := s.dbFactory.InitDB()
+	if err != nil {
+		s.log.Error("failed to init db")
+		return nil, err
+	}
+
+	result := &model.Password{}
+	query := db.Where(&model.Password{Link: link}).First(result)
+	if err := query.Error; err != nil {
+		s.log.Error("error on db query",
+			"error", err)
+
+		return nil, err
+	}
+
+	return &result.Password, nil
 }

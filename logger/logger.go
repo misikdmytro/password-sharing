@@ -32,31 +32,31 @@ func NewLogger() (Logger, error) {
 }
 
 func (l *logger) Debug(msg string, args ...interface{}) {
-	l.base.Debugw(msg, args)
+	l.base.Debugw(msg, args...)
 }
 
 func (l *logger) Info(msg string, args ...interface{}) {
-	l.base.Infow(msg, args)
+	l.base.Infow(msg, args...)
 }
 
 func (l *logger) Warn(msg string, args ...interface{}) {
-	l.base.Warnw(msg, args)
+	l.base.Warnw(msg, args...)
 }
 
 func (l *logger) Error(msg string, args ...interface{}) {
-	l.base.Errorw(msg, args)
+	l.base.Errorw(msg, args...)
 }
 
 func (l *logger) DPanic(msg string, args ...interface{}) {
-	l.base.DPanicw(msg, args)
+	l.base.DPanicw(msg, args...)
 }
 
 func (l *logger) Panic(msg string, args ...interface{}) {
-	l.base.Panicw(msg, args)
+	l.base.Panicw(msg, args...)
 }
 
 func (l *logger) Fatal(msg string, args ...interface{}) {
-	l.base.Fatalw(msg, args)
+	l.base.Fatalw(msg, args...)
 }
 
 func (l *logger) Close() {
