@@ -16,6 +16,7 @@ type Config struct {
 	} `mapstructure:"database"`
 	App struct {
 		LinkLength int `mapstructure:"linklength"`
+		Port       int `mapstructure:"port"`
 	} `mapstructure:"app"`
 }
 

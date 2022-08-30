@@ -38,5 +38,5 @@ func (s *server) Run(addr ...string) error {
 		}
 	}
 
-	return r.Run()
+	return r.Run(addr...)
 }

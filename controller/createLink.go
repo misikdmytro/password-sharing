@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	pserror "github.com/misikdmitriy/password-sharing/error"
 	"github.com/misikdmitriy/password-sharing/model"
 	"github.com/misikdmitriy/password-sharing/service"
 )
@@ -28,18 +29,15 @@ func (ctrl *createLinkController) Hander() gin.HandlerFunc {
 		body := &Body{}
 		err := c.BindJSON(body)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, model.ErrorResponse{
-				Message: "bad request",
-			})
+			c.JSON(pserror.BadRequestError())
 
 			return
 		}
 
 		link, err := ctrl.service.CreateLinkFromPassword(body.Password)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, model.ErrorResponse{
-				Message: "internal error",
-			})
+			psError := pserror.AsPasswordSharingError(err)
+			c.JSON(psError.ToResponse())
 
 			return
 		}
