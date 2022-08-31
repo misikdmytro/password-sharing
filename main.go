@@ -18,11 +18,8 @@ func main() {
 		panic(err)
 	}
 
-	log, err := logger.NewLogger()
-	if err != nil {
-		panic(err)
-	}
-	defer log.Close()
+	log := logger.NewLogger(conf)
+	defer log.Sync()
 
 	dbf := database.NewFactory(conf, log)
 	rf := helper.NewRandomFactory()

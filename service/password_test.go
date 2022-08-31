@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -16,15 +17,13 @@ func TestCreateLinkFromPasswordShouldDoIt(t *testing.T) {
 	c.Database.ConnectionString = "inmemdb"
 	c.Database.Provider = "sqlite"
 
+	ctxt := context.Background()
+
 	c.App.LinkLength = 8
 
-	log, err := logger.NewLogger()
-	if err != nil {
-		t.Error(err)
-	}
-
+	log := logger.NewLogger(c)
 	dbf := database.NewFactory(c, log)
-	err = tests.MigrateDatabase(dbf)
+	err := tests.MigrateDatabase(ctxt, dbf)
 	if err != nil {
 		t.Error(err)
 	}
@@ -32,7 +31,7 @@ func TestCreateLinkFromPasswordShouldDoIt(t *testing.T) {
 	rf := helper.NewRandomFactory()
 	s := NewPasswordService(dbf, c, rf, log)
 
-	result, err := s.CreateLinkFromPassword(uuid.New().String())
+	result, err := s.CreateLinkFromPassword(ctxt, uuid.New().String())
 	if err != nil {
 		t.Error(err)
 	}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
 )
 
 type Config struct {
@@ -18,6 +19,9 @@ type Config struct {
 		LinkLength int `mapstructure:"linklength"`
 		Port       int `mapstructure:"port"`
 	} `mapstructure:"app"`
+	Zap struct {
+		Level zapcore.Level `mapstructure:"level"`
+	} `mapstructure:"zap"`
 }
 
 func CreateEmpty() *Config {

@@ -29,7 +29,7 @@ func (ctrl *getLinkController) Hander() gin.HandlerFunc {
 			return
 		}
 
-		password, err := ctrl.service.GetPasswordFromLink(link)
+		password, err := ctrl.service.GetPasswordFromLink(c, link)
 		if err != nil {
 			psError := pserror.AsPasswordSharingError(err)
 			c.JSON(psError.ToResponse())

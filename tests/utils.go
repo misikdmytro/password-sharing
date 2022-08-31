@@ -1,12 +1,14 @@
 package tests
 
 import (
+	"context"
+
 	"github.com/misikdmitriy/password-sharing/database"
 	"github.com/misikdmitriy/password-sharing/model"
 )
 
-func MigrateDatabase(f database.DbFactory) error {
-	db, err := f.InitDB()
+func MigrateDatabase(c context.Context, f database.DbFactory) error {
+	db, err := f.InitDB(c)
 	if err != nil {
 		return err
 	}

@@ -1,30 +1,32 @@
 package service
 
 import (
+	"context"
+
 	"github.com/jackc/pgconn"
 	"github.com/misikdmitriy/password-sharing/config"
 	"github.com/misikdmitriy/password-sharing/database"
 	pserror "github.com/misikdmitriy/password-sharing/error"
 	"github.com/misikdmitriy/password-sharing/helper"
-	"github.com/misikdmitriy/password-sharing/logger"
 	"github.com/misikdmitriy/password-sharing/model"
+	"go.uber.org/zap"
 )
 
 type PasswordService interface {
-	GetPasswordFromLink(string) (string, error)
-	CreateLinkFromPassword(string) (string, error)
+	GetPasswordFromLink(context.Context, string) (string, error)
+	CreateLinkFromPassword(context.Context, string) (string, error)
 }
 
 type passwordService struct {
 	dbFactory database.DbFactory
 	conf      *config.Config
 	rf        helper.RandomGeneratorFactory
-	log       logger.Logger
+	log       *zap.Logger
 }
 
 func NewPasswordService(dbFactory database.DbFactory, conf *config.Config,
 	rf helper.RandomGeneratorFactory,
-	log logger.Logger) PasswordService {
+	log *zap.Logger) PasswordService {
 	return &passwordService{
 		dbFactory: dbFactory,
 		conf:      conf,
@@ -35,8 +37,8 @@ func NewPasswordService(dbFactory database.DbFactory, conf *config.Config,
 
 const pgUniqueViolationCode = "23505"
 
-func (s *passwordService) CreateLinkFromPassword(pwd string) (string, error) {
-	db, err := s.dbFactory.InitDB()
+func (s *passwordService) CreateLinkFromPassword(c context.Context, pwd string) (string, error) {
+	db, err := s.dbFactory.InitDB(c)
 	if err != nil {
 		return "", initDbError(s.log)
 	}
@@ -51,8 +53,9 @@ func (s *passwordService) CreateLinkFromPassword(pwd string) (string, error) {
 			const message = "error on randomizing"
 
 			s.log.Error(message,
-				"length", s.conf.App.LinkLength,
-				"error", err)
+				zap.Error(err),
+				zap.Int("length", s.conf.App.LinkLength),
+			)
 
 			return "", &pserror.PasswordSharingError{
 				Code:    pserror.RandomizerError,
@@ -71,7 +74,8 @@ func (s *passwordService) CreateLinkFromPassword(pwd string) (string, error) {
 			const message = "error on db command"
 
 			s.log.Error(message,
-				"error", err)
+				zap.Error(err),
+			)
 
 			return "", &pserror.PasswordSharingError{
 				Code:    pserror.DbCommandError,
@@ -86,8 +90,8 @@ func (s *passwordService) CreateLinkFromPassword(pwd string) (string, error) {
 
 const recordNotFoundError = "record not found"
 
-func (s *passwordService) GetPasswordFromLink(link string) (string, error) {
-	db, err := s.dbFactory.InitDB()
+func (s *passwordService) GetPasswordFromLink(c context.Context, link string) (string, error) {
+	db, err := s.dbFactory.InitDB(c)
 	if err != nil {
 		return "", initDbError(s.log)
 	}
@@ -99,7 +103,8 @@ func (s *passwordService) GetPasswordFromLink(link string) (string, error) {
 			const message = "password not found"
 
 			s.log.Warn(message,
-				"link", link)
+				zap.String("link", link),
+			)
 
 			return "", &pserror.PasswordSharingError{
 				Code:    pserror.PasswordNotFound,
@@ -110,7 +115,8 @@ func (s *passwordService) GetPasswordFromLink(link string) (string, error) {
 		const message = "error on db query"
 
 		s.log.Error(message,
-			"error", err)
+			zap.Error(err),
+		)
 
 		return "", &pserror.PasswordSharingError{
 			Code:    pserror.RandomizerError,
@@ -121,7 +127,7 @@ func (s *passwordService) GetPasswordFromLink(link string) (string, error) {
 	return result.Password, nil
 }
 
-func initDbError(log logger.Logger) error {
+func initDbError(log *zap.Logger) error {
 	const message = "failed to init db"
 
 	log.Error(message)

@@ -1,10 +1,11 @@
 package database
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/misikdmitriy/password-sharing/config"
-	"github.com/misikdmitriy/password-sharing/logger"
+	"go.uber.org/zap"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
@@ -12,27 +13,28 @@ import (
 )
 
 type DbFactory interface {
-	InitDB() (*gorm.DB, error)
+	InitDB(context.Context) (*gorm.DB, error)
 }
 
 type dbFactory struct {
 	c   *config.Config
-	log logger.Logger
+	log *zap.Logger
 }
 
-func NewFactory(conf *config.Config, log logger.Logger) DbFactory {
+func NewFactory(conf *config.Config, log *zap.Logger) DbFactory {
 	return &dbFactory{
 		c:   conf,
 		log: log,
 	}
 }
 
-func (f *dbFactory) InitDB() (*gorm.DB, error) {
+func (f *dbFactory) InitDB(c context.Context) (*gorm.DB, error) {
 	conn, err := f.createConnection()
 	if err != nil {
 		f.log.Error("cannot create db connection",
-			"provider", f.c.Database.Provider,
-			"error", err)
+			zap.Error(err),
+			zap.String("provider", f.c.Database.Provider),
+		)
 
 		return nil, err
 	}
@@ -40,18 +42,20 @@ func (f *dbFactory) InitDB() (*gorm.DB, error) {
 	db, err := gorm.Open(*conn, &gorm.Config{})
 	if err != nil {
 		f.log.Error("cannot open gorm",
-			"provider", f.c.Database.Provider,
-			"error", err)
+			zap.Error(err),
+			zap.String("provider", f.c.Database.Provider),
+		)
 
 		return nil, err
 	}
 
-	return db, nil
+	return db.WithContext(c), nil
 }
 
 func (f *dbFactory) createConnection() (*gorm.Dialector, error) {
 	f.log.Debug("creating db connection",
-		"provider", f.c.Database.Provider)
+		zap.String("provider", f.c.Database.Provider),
+	)
 
 	switch f.c.Database.Provider {
 	case "pg":

@@ -8,5 +8,8 @@
     "app": {
         "linkLength": 8,
         "port": 3000
+    },
+    "zap": {
+        "level": -1
     }
 }

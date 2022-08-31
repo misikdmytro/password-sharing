@@ -34,7 +34,7 @@ func (ctrl *createLinkController) Hander() gin.HandlerFunc {
 			return
 		}
 
-		link, err := ctrl.service.CreateLinkFromPassword(body.Password)
+		link, err := ctrl.service.CreateLinkFromPassword(c, body.Password)
 		if err != nil {
 			psError := pserror.AsPasswordSharingError(err)
 			c.JSON(psError.ToResponse())
