@@ -1,0 +1,9 @@
+database:
+  connectionstring: host=localhost port=5432 user=postgres password=postgres dbname=passwords sslmode=disable
+  provider: pg
+app:
+  linklength: 8
+  port: 3000
+zap:
+  level: -1
+  logspath: ./logs/go.log

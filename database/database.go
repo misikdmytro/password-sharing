@@ -6,6 +6,7 @@ import (
 
 	"github.com/misikdmitriy/password-sharing/config"
 	"go.uber.org/zap"
+	"moul.io/zapgorm2"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
@@ -39,7 +40,10 @@ func (f *dbFactory) InitDB(c context.Context) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db, err := gorm.Open(*conn, &gorm.Config{})
+	logger := zapgorm2.New(f.log)
+	db, err := gorm.Open(*conn, &gorm.Config{
+		Logger: logger,
+	})
 	if err != nil {
 		f.log.Error("cannot open gorm",
 			zap.Error(err),

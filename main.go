@@ -18,14 +18,18 @@ func main() {
 		panic(err)
 	}
 
-	log := logger.NewLogger(conf)
-	defer log.Sync()
+	log, close, err := logger.NewLogger(conf)
+	if err != nil {
+		panic(err)
+	}
+	defer close()
 
 	dbf := database.NewFactory(conf, log)
 	rf := helper.NewRandomFactory()
 	service := service.NewPasswordService(dbf, conf, rf, log)
 
 	server := server.NewServer(
+		log,
 		controller.NewCreateLinkController(service),
 		controller.NewGetLinkController(service),
 	)

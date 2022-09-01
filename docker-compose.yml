@@ -5,8 +5,14 @@ services:
     container_name: app
     build:
       context: .
+    environment:
+      PSCONFIG_DATABASE_CONNECTIONSTRING: host=postgres port=5432 user=postgres password=postgres dbname=passwords sslmode=disable
+      GIN_MODE: release
+      WEB_ENV: prod
     ports:
-      - 8080:8080
+      - 8080:80
+    volumes:
+      - ./logs/:/logs/
     depends_on:
       - db
 
@@ -31,6 +37,73 @@ services:
       PGADMIN_DEFAULT_PASSWORD: 123456
     ports:
       - 5050:80
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.4.1
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-s",
+          "-f",
+          "http://localhost:9200/_cat/health"
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    ports:
+      - 9200:9200
+      - 9300:9300
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.4.1
+    volumes:
+      - ./resources/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.4.1
+    command: filebeat -e -strict.perms=false
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./resources/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs/:/logs/
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.4.1
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-s",
+          "-f",
+          "http://localhost:5601/api/status"
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 50
+    ports:
+      - 5601:5601
 
 volumes:
   db:

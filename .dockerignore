@@ -22,3 +22,5 @@ README.md
 Dockerfile
 docker-compose.yml
 
+**/inmemdb
+**/*.log

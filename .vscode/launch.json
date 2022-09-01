@@ -11,7 +11,7 @@
             "mode": "auto",
             "program": "${fileDirname}",
             "env": {
-                "WEB_ENV": "dev",
+                "WEB_ENV": "dev"
             }
         }
     ]

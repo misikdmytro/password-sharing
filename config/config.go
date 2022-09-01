@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -11,8 +12,6 @@ import (
 type Config struct {
 	Database struct {
 		ConnectionString string `mapstructure:"connectionstring"`
-		MaxConnection    int    `mapstructure:"maxconnection"`
-		Timeout          int    `mapstructure:"timeout"`
 		Provider         string `mapstructure:"provider"`
 	} `mapstructure:"database"`
 	App struct {
@@ -20,7 +19,8 @@ type Config struct {
 		Port       int `mapstructure:"port"`
 	} `mapstructure:"app"`
 	Zap struct {
-		Level zapcore.Level `mapstructure:"level"`
+		Level    zapcore.Level `mapstructure:"level"`
+		LogsPath string        `mapstructure:"logspath"`
 	} `mapstructure:"zap"`
 }
 
@@ -31,8 +31,9 @@ func CreateEmpty() *Config {
 func LoadConfig() (*Config, error) {
 	conf := viper.New()
 
-	conf.SetConfigFile(getWebEnv() + ".json")
-	conf.SetConfigType("json")
+	configname := fmt.Sprintf("%s.yaml", getWebEnv())
+	conf.SetConfigFile(configname)
+	conf.SetConfigType("yaml")
 
 	conf.SetEnvPrefix("psconfig")
 	conf.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

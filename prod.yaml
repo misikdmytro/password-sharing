@@ -1,0 +1,9 @@
+database:
+  connectionstring: placeholder
+  provider: pg
+app:
+  linklength: 16
+  port: 80
+zap:
+  level: 0
+  logspath: ./logs/go.log
