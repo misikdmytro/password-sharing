@@ -12,3 +12,8 @@ type LinkResponse struct {
 type PasswordResponse struct {
 	Password string `json:"password"`
 }
+
+type HealthResponse struct {
+	Healthy bool   `json:"healthy"`
+	Reason  string `json:"reason"`
+}

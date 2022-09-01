@@ -8,6 +8,7 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/misikdmitriy/password-sharing/controller"
+	"github.com/penglongli/gin-metrics/ginmetrics"
 	"go.uber.org/zap"
 )
 
@@ -28,23 +29,28 @@ func NewServer(logger *zap.Logger, controllers ...controller.Controller) Server 
 }
 
 func (s *server) Run(addr ...string) error {
-	r := gin.Default()
+	router := gin.Default()
 
-	r.Use(ginzap.Ginzap(s.logger, time.RFC3339, true))
-	r.Use(ginzap.RecoveryWithZap(s.logger, true))
+	router.Use(ginzap.Ginzap(s.logger, time.RFC3339, true))
+	router.Use(ginzap.RecoveryWithZap(s.logger, true))
+
+	metrics := ginmetrics.GetMonitor()
+
+	metrics.SetMetricPath("/metrics")
+	metrics.Use(router)
 
 	for _, ctrl := range s.controllers {
 		method := ctrl.Method()
 
 		switch method {
 		case http.MethodGet:
-			r.GET(ctrl.Route(), ctrl.Hander())
+			router.GET(ctrl.Route(), ctrl.Hander())
 		case http.MethodPost:
-			r.POST(ctrl.Route(), ctrl.Hander())
+			router.POST(ctrl.Route(), ctrl.Hander())
 		default:
 			return fmt.Errorf("cannot create HTTP handler of method %s", method)
 		}
 	}
 
-	return r.Run(addr...)
+	return router.Run(addr...)
 }
