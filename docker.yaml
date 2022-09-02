@@ -1,0 +1,34 @@
+database:
+  connectionstring: host=db port=5432 user=postgres password=postgres dbname=passwords sslmode=disable
+  provider: pg
+app:
+  linklength: 16
+  port: 80
+  address: app
+  consuladdress: consul:8500
+  serviceid: 0
+  basepath: http://localhost:8080/pwd
+zap:
+  level: 0
+  logspath: /logs/
+encrypt:
+  secret: bznrzuxf3JelmDXLzWD23KgR
+  iv:
+    [
+      243,
+      171,
+      208,
+      111,
+      176,
+      141,
+      239,
+      110,
+      164,
+      137,
+      206,
+      112,
+      18,
+      228,
+      199,
+      120,
+    ]

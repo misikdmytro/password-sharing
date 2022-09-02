@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/misikdmitriy/password-sharing/config"
 	"github.com/misikdmitriy/password-sharing/controller"
+	"github.com/misikdmitriy/password-sharing/logger"
 	"github.com/penglongli/gin-metrics/ginmetrics"
 	"go.uber.org/zap"
 )
@@ -23,16 +24,16 @@ type Server interface {
 }
 
 type server struct {
-	controllers []controller.Controller
-	logger      *zap.Logger
-	config      *config.Config
+	controllers   []controller.Controller
+	loggerFactory logger.LoggerFactory
+	config        *config.Config
 }
 
-func NewServer(logger *zap.Logger, config *config.Config, controllers ...controller.Controller) Server {
+func NewServer(loggerFactory logger.LoggerFactory, config *config.Config, controllers ...controller.Controller) Server {
 	return &server{
-		controllers: controllers,
-		config:      config,
-		logger:      logger,
+		controllers:   controllers,
+		config:        config,
+		loggerFactory: loggerFactory,
 	}
 }
 
@@ -40,9 +41,14 @@ const serviceName = "passwordsharing"
 const healthCheck = "healthcheck"
 
 func (s *server) Run() error {
-	s.logger.Info("starting web server...")
+	appLogger, closeLogger, err := s.loggerFactory.NewLogger()
+	if err != nil {
+		return err
+	}
+	defer closeLogger()
 
-	router, err := s.buildRouter()
+	appLogger.Info("starting web server...")
+	router, err := s.buildRouter(appLogger)
 	if err != nil {
 		return err
 	}
@@ -52,7 +58,7 @@ func (s *server) Run() error {
 		Handler: router,
 	}
 
-	startupFailed := make(chan bool, 1)
+	startupFailed := make(chan interface{}, 1)
 	defer close(startupFailed)
 
 	go func() {
@@ -80,11 +86,11 @@ func (s *server) Run() error {
 	}
 }
 
-func (s *server) buildRouter() (*gin.Engine, error) {
+func (s *server) buildRouter(appLogger *zap.Logger) (*gin.Engine, error) {
 	router := gin.Default()
 
-	router.Use(ginzap.Ginzap(s.logger, time.RFC3339, true))
-	router.Use(ginzap.RecoveryWithZap(s.logger, true))
+	router.Use(ginzap.Ginzap(appLogger, time.RFC3339, true))
+	router.Use(ginzap.RecoveryWithZap(appLogger, true))
 
 	metrics := ginmetrics.GetMonitor()
 

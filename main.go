@@ -9,34 +9,27 @@ import (
 	"github.com/misikdmitriy/password-sharing/logger"
 	"github.com/misikdmitriy/password-sharing/server"
 	"github.com/misikdmitriy/password-sharing/service"
-	"go.uber.org/zap"
 )
 
 func main() {
-	conf, err := config.LoadConfig()
+	appConfiguration, err := config.LoadConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	log, close, err := logger.NewLogger(conf)
-	if err != nil {
-		panic(err)
-	}
-	defer close()
+	appLogger := logger.NewLoggerFactory(appConfiguration)
 
-	dbf := database.NewFactory(conf, log)
-	rf := helper.NewRandomFactory()
-	service := service.NewPasswordService(dbf, conf, rf, log)
+	encoder := helper.NewEncoder(appConfiguration)
+	databaseFactory := database.NewFactory(appConfiguration, appLogger)
+	randomFactory := helper.NewRandomFactory()
+	service := service.NewPasswordService(databaseFactory, appConfiguration, randomFactory, appLogger, encoder)
 
-	pgHealthCheck := health.NewPgHealthCheck(dbf, func(err error) {
-		log.Error("postgres health check failed",
-			zap.Error(err))
-	})
+	pgHealthCheck := health.NewPgHealthCheck(databaseFactory, appLogger)
 
 	server := server.NewServer(
-		log,
-		conf,
-		controller.NewCreateLinkController(service),
+		appLogger,
+		appConfiguration,
+		controller.NewCreateLinkController(service, appConfiguration),
 		controller.NewGetLinkController(service),
 		controller.NewHealthController(pgHealthCheck),
 	)

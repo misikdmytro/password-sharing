@@ -16,6 +16,8 @@ const (
 	RandomizerError                = 50002
 	DbQueryError                   = 50003
 	DbCommandError                 = 50004
+	EncodeError                    = 50005
+	DecodeError                    = 50006
 )
 
 type PasswordSharingError struct {

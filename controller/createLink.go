@@ -1,10 +1,12 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/misikdmitriy/password-sharing/config"
 	pserror "github.com/misikdmitriy/password-sharing/error"
 	"github.com/misikdmitriy/password-sharing/model"
 	"github.com/misikdmitriy/password-sharing/service"
@@ -12,11 +14,13 @@ import (
 
 type createLinkController struct {
 	service service.PasswordService
+	config  *config.Config
 }
 
-func NewCreateLinkController(service service.PasswordService) Controller {
+func NewCreateLinkController(service service.PasswordService, config *config.Config) Controller {
 	return &createLinkController{
 		service: service,
+		config:  config,
 	}
 }
 
@@ -42,8 +46,12 @@ func (ctrl *createLinkController) Hander() gin.HandlerFunc {
 			return
 		}
 
+		url := fmt.Sprintf("%s/%s",
+			ctrl.config.App.BasePath,
+			link)
+
 		c.JSON(http.StatusCreated, model.LinkResponse{
-			Link: link,
+			Url: url,
 		})
 	}
 }

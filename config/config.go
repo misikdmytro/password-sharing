@@ -20,15 +20,16 @@ type Config struct {
 		Address       string `mapstructure:"address"`
 		ConsulAddress string `mapstructure:"consuladdress"`
 		ServiceId     int    `mapstructure:"serviceid"`
+		BasePath      string `mapstructure:"basepath"`
 	} `mapstructure:"app"`
 	Zap struct {
 		Level    zapcore.Level `mapstructure:"level"`
 		LogsPath string        `mapstructure:"logspath"`
 	} `mapstructure:"zap"`
-}
-
-func CreateEmpty() *Config {
-	return &Config{}
+	Encrypt struct {
+		Secret string `mapstructure:"secret"`
+		IV     []byte `mapstructure:"iv"`
+	} `mapstructure:"encrypt"`
 }
 
 func LoadConfig() (*Config, error) {

@@ -6,7 +6,7 @@ type ErrorResponse struct {
 }
 
 type LinkResponse struct {
-	Link string `json:"link"`
+	Url string `json:"url"`
 }
 
 type PasswordResponse struct {

@@ -9,13 +9,11 @@ services:
     build:
       context: .
     environment:
-      PSCONFIG_DATABASE_CONNECTIONSTRING: host=db port=5432 user=postgres password=postgres dbname=passwords sslmode=disable
       GIN_MODE: release
-      WEB_ENV: prod
+      WEB_ENV: docker
       PSCONFIG_APP_PORT: 81
       PSCONFIG_APP_ADDRESS: app1
       PSCONFIG_APP_SERVICEID: 1
-      PSCONFIG_ZAP_LOGSPATH: /logs/go1.log
     expose:
       - 81
     volumes:
@@ -38,13 +36,11 @@ services:
     build:
       context: .
     environment:
-      PSCONFIG_DATABASE_CONNECTIONSTRING: host=db port=5432 user=postgres password=postgres dbname=passwords sslmode=disable
       GIN_MODE: release
-      WEB_ENV: prod
+      WEB_ENV: docker
       PSCONFIG_APP_PORT: 82
       PSCONFIG_APP_ADDRESS: app2
       PSCONFIG_APP_SERVICEID: 2
-      PSCONFIG_ZAP_LOGSPATH: /logs/go2.log
     expose:
       - 82
     volumes:

@@ -13,22 +13,25 @@ import (
 )
 
 func TestCreateLinkFromPasswordShouldDoIt(t *testing.T) {
-	c := config.CreateEmpty()
+	c := &config.Config{}
 	c.Database.ConnectionString = "inmemdb"
 	c.Database.Provider = "sqlite"
+	c.Encrypt.Secret = "123456789123456789012345"
+	c.Encrypt.IV = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 
 	ctxt := context.Background()
 	c.App.LinkLength = 8
 
-	log := logger.TestLogger()
-	dbf := database.NewFactory(c, log)
+	loggerFactory := logger.NewTestLoggerFactory()
+	encoder := helper.NewEncoder(c)
+	dbf := database.NewFactory(c, loggerFactory)
 	err := tests.MigrateDatabase(ctxt, dbf)
 	if err != nil {
 		t.Error(err)
 	}
 
 	rf := helper.NewRandomFactory()
-	s := NewPasswordService(dbf, c, rf, log)
+	s := NewPasswordService(dbf, c, rf, loggerFactory, encoder)
 
 	result, err := s.CreateLinkFromPassword(ctxt, uuid.New().String())
 	if err != nil {

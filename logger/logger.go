@@ -1,17 +1,42 @@
 package logger
 
 import (
+	"fmt"
 	"os"
+	"path"
+	"time"
 
 	"github.com/misikdmitriy/password-sharing/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-type CloseFunc func()
+type LoggerFactory interface {
+	NewLogger() (*zap.Logger, func(), error)
+}
 
-func NewLogger(c *config.Config) (*zap.Logger, CloseFunc, error) {
-	file, err := os.Create(c.Zap.LogsPath)
+type loggerFactory struct {
+	configuration *config.Config
+}
+
+type testLoggerFactory struct {
+}
+
+func NewLoggerFactory(configuration *config.Config) LoggerFactory {
+	return &loggerFactory{
+		configuration: configuration,
+	}
+}
+
+func NewTestLoggerFactory() LoggerFactory {
+	return &testLoggerFactory{}
+}
+
+func (lf *loggerFactory) NewLogger() (*zap.Logger, func(), error) {
+	now := time.Now()
+	logfile := path.Join(lf.configuration.Zap.LogsPath, fmt.Sprintf("%s.log", now.Format("2006-01-02-15")))
+
+	file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -23,18 +48,19 @@ func NewLogger(c *config.Config) (*zap.Logger, CloseFunc, error) {
 	consoleEncoder := zapcore.NewConsoleEncoder(pe)
 
 	core := zapcore.NewTee(
-		zapcore.NewCore(fileEncoder, zapcore.AddSync(file), c.Zap.Level),
-		zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), c.Zap.Level),
+		zapcore.NewCore(fileEncoder, zapcore.AddSync(file), lf.configuration.Zap.Level),
+		zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), lf.configuration.Zap.Level),
 	)
 
 	log := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.WarnLevel))
-
-	return log, func() {
+	close := func() {
 		log.Sync()
 		file.Close()
-	}, nil
+	}
+
+	return log, close, nil
 }
 
-func TestLogger() *zap.Logger {
-	return zap.NewExample()
+func (lf *testLoggerFactory) NewLogger() (*zap.Logger, func(), error) {
+	return zap.NewExample(), func() {}, nil
 }

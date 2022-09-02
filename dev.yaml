@@ -6,6 +6,11 @@ app:
   consuladdress: 127.0.0.1:8500
   linklength: 8
   port: 4000
+  basepath: http://localhost:4000/pwd
 zap:
   level: -1
-  logspath: ./logs/go.log
+  logspath: ./logs/
+encrypt:
+  secret: bybBGV1Q1sSp9I2tVK0ysd1c
+  iv:
+    [33, 139, 219, 236, 215, 64, 45, 92, 195, 172, 244, 171, 198, 215, 106, 73]

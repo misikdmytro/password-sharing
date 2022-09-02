@@ -8,6 +8,7 @@ import (
 	"github.com/misikdmitriy/password-sharing/database"
 	pserror "github.com/misikdmitriy/password-sharing/error"
 	"github.com/misikdmitriy/password-sharing/helper"
+	"github.com/misikdmitriy/password-sharing/logger"
 	"github.com/misikdmitriy/password-sharing/model"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -21,20 +22,24 @@ type PasswordService interface {
 }
 
 type passwordService struct {
-	dbFactory database.DbFactory
-	conf      *config.Config
-	rf        helper.RandomGeneratorFactory
-	log       *zap.Logger
+	dbFactory     database.DbFactory
+	configuration *config.Config
+	randomFactory helper.RandomGeneratorFactory
+	loggerFactory logger.LoggerFactory
+	encoder       helper.Encoder
 }
 
-func NewPasswordService(dbFactory database.DbFactory, conf *config.Config,
+func NewPasswordService(dbFactory database.DbFactory,
+	conf *config.Config,
 	rf helper.RandomGeneratorFactory,
-	log *zap.Logger) PasswordService {
+	loggerFactory logger.LoggerFactory,
+	encoder helper.Encoder) PasswordService {
 	return &passwordService{
-		dbFactory: dbFactory,
-		conf:      conf,
-		rf:        rf,
-		log:       log,
+		dbFactory:     dbFactory,
+		configuration: conf,
+		randomFactory: rf,
+		loggerFactory: loggerFactory,
+		encoder:       encoder,
 	}
 }
 
@@ -66,22 +71,40 @@ const (
 	notFound        = "not_found"
 )
 
-func (s *passwordService) CreateLinkFromPassword(c context.Context, pwd string) (string, error) {
-	db, close, err := s.dbFactory.InitDB(c)
+func (s *passwordService) CreateLinkFromPassword(c context.Context, password string) (string, error) {
+	appLogger, loggerClose, err := s.loggerFactory.NewLogger()
 	if err != nil {
-		return "", initDbError(s.log)
+		return "", err
 	}
-	defer close()
+	defer loggerClose()
+
+	db, dbClose, err := s.dbFactory.InitDB(c)
+	if err != nil {
+		return "", initDbError(appLogger)
+	}
+	defer dbClose()
+
+	encoded, err := s.encoder.Encode(password)
+	if err != nil {
+		const message = "failed on encodingg"
+
+		appLogger.Error(message)
+
+		return "", &pserror.PasswordSharingError{
+			Code:    pserror.EncodeError,
+			Message: message,
+		}
+	}
 
 	for {
-		rg := s.rf.NewRandomGenerator()
-		link, err := rg.RandomString(s.conf.App.LinkLength)
+		rg := s.randomFactory.NewRandomGenerator()
+		link, err := rg.RandomString(s.configuration.App.LinkLength)
 		if err != nil {
 			const message = "error on randomizing"
 
-			s.log.Error(message,
+			appLogger.Error(message,
 				zap.Error(err),
-				zap.Int("length", s.conf.App.LinkLength),
+				zap.Int("length", s.configuration.App.LinkLength),
 			)
 
 			return "", &pserror.PasswordSharingError{
@@ -92,7 +115,10 @@ func (s *passwordService) CreateLinkFromPassword(c context.Context, pwd string) 
 
 		var command *gorm.DB
 		measureTime(func() {
-			command = db.Save(model.NewPassword(link, pwd))
+			command = db.Save(&model.Password{
+				Link:     link,
+				Password: encoded,
+			})
 		}, dbTime.WithLabelValues(newPassword))
 		dbCounter.WithLabelValues(newPassword).Inc()
 
@@ -100,14 +126,14 @@ func (s *passwordService) CreateLinkFromPassword(c context.Context, pwd string) 
 			pgErr, ok := err.(*pgconn.PgError)
 			if ok && pgErr.Code == pgUniqueViolationCode {
 				dbErrorsCounter.WithLabelValues(uniqueViolation).Inc()
-				s.log.Warn("retry after unique key violation")
+				appLogger.Warn("retry after unique key violation")
 				continue
 			}
 
 			const message = "error on db command"
 
 			dbErrorsCounter.WithLabelValues(unknownError).Inc()
-			s.log.Error(message,
+			appLogger.Error(message,
 				zap.Error(err),
 			)
 
@@ -117,7 +143,7 @@ func (s *passwordService) CreateLinkFromPassword(c context.Context, pwd string) 
 			}
 		}
 
-		s.log.Debug("link generated")
+		appLogger.Debug("link generated")
 		return link, nil
 	}
 }
@@ -125,11 +151,17 @@ func (s *passwordService) CreateLinkFromPassword(c context.Context, pwd string) 
 const recordNotFoundError = "record not found"
 
 func (s *passwordService) GetPasswordFromLink(c context.Context, link string) (string, error) {
-	db, close, err := s.dbFactory.InitDB(c)
+	appLogger, loggerClose, err := s.loggerFactory.NewLogger()
 	if err != nil {
-		return "", initDbError(s.log)
+		return "", err
 	}
-	defer close()
+	defer loggerClose()
+
+	db, dbClose, err := s.dbFactory.InitDB(c)
+	if err != nil {
+		return "", initDbError(appLogger)
+	}
+	defer dbClose()
 
 	result := &model.Password{}
 	var query *gorm.DB
@@ -143,7 +175,7 @@ func (s *passwordService) GetPasswordFromLink(c context.Context, link string) (s
 			const message = "password not found"
 
 			dbErrorsCounter.WithLabelValues(notFound).Inc()
-			s.log.Warn(message,
+			appLogger.Warn(message,
 				zap.String("link", link),
 			)
 
@@ -156,7 +188,7 @@ func (s *passwordService) GetPasswordFromLink(c context.Context, link string) (s
 		const message = "error on db query"
 
 		dbErrorsCounter.WithLabelValues(unknownError).Inc()
-		s.log.Error(message,
+		appLogger.Error(message,
 			zap.Error(err),
 		)
 
@@ -166,7 +198,19 @@ func (s *passwordService) GetPasswordFromLink(c context.Context, link string) (s
 		}
 	}
 
-	return result.Password, nil
+	decoded, err := s.encoder.Decode(result.Password)
+	if err != nil {
+		const message = "failed on decoding"
+
+		appLogger.Error(message)
+
+		return "", &pserror.PasswordSharingError{
+			Code:    pserror.DecodeError,
+			Message: message,
+		}
+	}
+
+	return decoded, nil
 }
 
 func measureTime(action func(), metric prometheus.Observer) {
