@@ -1,27 +1,85 @@
 version: '3.8'
 
 services:
-  app:
-    container_name: app
+  app1:
     restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
     build:
       context: .
     environment:
       PSCONFIG_DATABASE_CONNECTIONSTRING: host=db port=5432 user=postgres password=postgres dbname=passwords sslmode=disable
       GIN_MODE: release
       WEB_ENV: prod
-    ports:
-      - 8080:80
+      PSCONFIG_APP_PORT: 81
+      PSCONFIG_APP_ADDRESS: app1
+      PSCONFIG_APP_SERVICEID: 1
+      PSCONFIG_ZAP_LOGSPATH: /logs/go1.log
+    expose:
+      - 81
     volumes:
-      - ./logs/:/logs/
+      - logs:/logs/
     depends_on:
       - db
+      - consul
     healthcheck:
-      test: [ "CMD", "curl", "-s", "-f", "http://localhost/health" ]
+      test: [ "CMD", "curl", "-s", "-f", "http://app1:81/health" ]
       interval: 10s
       timeout: 2s
       retries: 5
       start_period: 15s
+
+  app2:
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    build:
+      context: .
+    environment:
+      PSCONFIG_DATABASE_CONNECTIONSTRING: host=db port=5432 user=postgres password=postgres dbname=passwords sslmode=disable
+      GIN_MODE: release
+      WEB_ENV: prod
+      PSCONFIG_APP_PORT: 82
+      PSCONFIG_APP_ADDRESS: app2
+      PSCONFIG_APP_SERVICEID: 2
+      PSCONFIG_ZAP_LOGSPATH: /logs/go2.log
+    expose:
+      - 82
+    volumes:
+      - logs:/logs/
+    depends_on:
+      - db
+      - consul
+    healthcheck:
+      test: [ "CMD", "curl", "-s", "-f", "http://app2:82/health" ]
+      interval: 10s
+      timeout: 2s
+      retries: 5
+      start_period: 15s
+
+  consul:
+    image: consul:1.13
+    restart: always
+    command: agent -server -ui -node=server-1 -bootstrap-expect=1
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    expose:
+      - 8600
+      - 8500
+    volumes:
+      - consul:/consul/data
+      - ./resources/consul.json:/consul/config/config.json
+
+  haproxy:
+    image: haproxy:2.3
+    restart: always
+    volumes:
+      - ./resources/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    ports:
+      - 8080:80
+      - 1936:1936
 
   db:
     image: postgres:14
@@ -29,13 +87,14 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    ports:
+      - 5432:5432
     expose:
       - 5432
     volumes:
       - db:/var/lib/postgresql/data
 
   pgadmin:
-    container_name: pgadmin
     image: dpage/pgadmin4
     restart: always
     environment:
@@ -50,6 +109,8 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
+    volumes:
+      - elasticsearch-storage:/usr/share/elasticsearch/data
     ulimits:
       memlock:
         soft: -1
@@ -92,7 +153,7 @@ services:
         condition: service_healthy
     volumes:
       - ./resources/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ./logs/:/logs/
+      - logs:/logs/:ro
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.4.1
@@ -136,8 +197,11 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - grafana-storage:/var/lib/grafana grafana/grafana-enterprise
+      - grafana-storage:/var/lib/grafana
 
 volumes:
   db:
+  elasticsearch-storage:
   grafana-storage:
+  consul:
+  logs:

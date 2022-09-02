@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/misikdmitriy/password-sharing/config"
 	"github.com/misikdmitriy/password-sharing/controller"
 	"github.com/misikdmitriy/password-sharing/database"
@@ -37,12 +35,13 @@ func main() {
 
 	server := server.NewServer(
 		log,
+		conf,
 		controller.NewCreateLinkController(service),
 		controller.NewGetLinkController(service),
 		controller.NewHealthController(pgHealthCheck),
 	)
 
-	if err := server.Run(fmt.Sprintf(":%d", conf.App.Port)); err != nil {
+	if err = server.Run(); err != nil {
 		panic(err)
 	}
 }

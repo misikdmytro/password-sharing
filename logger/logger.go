@@ -34,3 +34,7 @@ func NewLogger(c *config.Config) (*zap.Logger, CloseFunc, error) {
 		file.Close()
 	}, nil
 }
+
+func TestLogger() *zap.Logger {
+	return zap.NewExample()
+}

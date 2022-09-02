@@ -20,10 +20,11 @@ func NewPgHealthCheck(factory database.DbFactory, onUnhealthy func(err error)) H
 }
 
 func (pg *pgHealthCheck) Check(c context.Context) (bool, error) {
-	db, err := pg.factory.InitDB(c)
+	db, close, err := pg.factory.InitDB(c)
 	if err != nil {
 		return false, err
 	}
+	defer close()
 
 	if err := db.Exec("SELECT 1").Error; err != nil {
 		pg.onUnhealthy(err)

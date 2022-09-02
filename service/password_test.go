@@ -18,17 +18,11 @@ func TestCreateLinkFromPasswordShouldDoIt(t *testing.T) {
 	c.Database.Provider = "sqlite"
 
 	ctxt := context.Background()
-
 	c.App.LinkLength = 8
 
-	log, close, err := logger.NewLogger(c)
-	if err != nil {
-		t.Error(err)
-	}
-	defer close()
-
+	log := logger.TestLogger()
 	dbf := database.NewFactory(c, log)
-	err = tests.MigrateDatabase(ctxt, dbf)
+	err := tests.MigrateDatabase(ctxt, dbf)
 	if err != nil {
 		t.Error(err)
 	}

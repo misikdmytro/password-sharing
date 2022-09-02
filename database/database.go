@@ -14,7 +14,7 @@ import (
 )
 
 type DbFactory interface {
-	InitDB(context.Context) (*gorm.DB, error)
+	InitDB(context.Context) (*gorm.DB, func(), error)
 }
 
 type dbFactory struct {
@@ -29,7 +29,7 @@ func NewFactory(conf *config.Config, log *zap.Logger) DbFactory {
 	}
 }
 
-func (f *dbFactory) InitDB(c context.Context) (*gorm.DB, error) {
+func (f *dbFactory) InitDB(c context.Context) (*gorm.DB, func(), error) {
 	conn, err := f.createConnection()
 	if err != nil {
 		f.log.Error("cannot create db connection",
@@ -37,7 +37,7 @@ func (f *dbFactory) InitDB(c context.Context) (*gorm.DB, error) {
 			zap.String("provider", f.c.Database.Provider),
 		)
 
-		return nil, err
+		return nil, nil, err
 	}
 
 	logger := zapgorm2.New(f.log)
@@ -50,10 +50,23 @@ func (f *dbFactory) InitDB(c context.Context) (*gorm.DB, error) {
 			zap.String("provider", f.c.Database.Provider),
 		)
 
-		return nil, err
+		return nil, nil, err
 	}
 
-	return db.WithContext(c), nil
+	sql, err := db.DB()
+	if err != nil {
+		f.log.Error("failed on db get",
+			zap.Error(err),
+			zap.String("provider", f.c.Database.Provider),
+		)
+
+		return nil, nil, err
+	}
+	close := func() {
+		sql.Close()
+	}
+
+	return db.WithContext(c), close, nil
 }
 
 func (f *dbFactory) createConnection() (*gorm.Dialector, error) {

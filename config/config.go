@@ -15,8 +15,11 @@ type Config struct {
 		Provider         string `mapstructure:"provider"`
 	} `mapstructure:"database"`
 	App struct {
-		LinkLength int `mapstructure:"linklength"`
-		Port       int `mapstructure:"port"`
+		LinkLength    int    `mapstructure:"linklength"`
+		Port          int    `mapstructure:"port"`
+		Address       string `mapstructure:"address"`
+		ConsulAddress string `mapstructure:"consuladdress"`
+		ServiceId     int    `mapstructure:"serviceid"`
 	} `mapstructure:"app"`
 	Zap struct {
 		Level    zapcore.Level `mapstructure:"level"`

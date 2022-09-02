@@ -1,0 +1,10 @@
+{
+    "bind_addr": "0.0.0.0",
+    "client_addr": "0.0.0.0",
+    "datacenter": "local",
+    "data_dir": "/opt/consul",
+    "log_level": "INFO",
+    "node_name": "node0",
+    "server": true,
+    "bootstrap": true
+}

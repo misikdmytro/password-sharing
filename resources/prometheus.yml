@@ -3,8 +3,14 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: "prometheus"
+  - job_name: "app1_metrics"
     scrape_interval: 5s
     static_configs:
       - targets:
-        - app:80
+        - app1:81
+
+  - job_name: "app2_metrics"
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - app2:82

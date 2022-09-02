@@ -4,6 +4,9 @@ database:
 app:
   linklength: 16
   port: 80
+  address: app
+  consuladdress: consul:8500
+  serviceid: 0
 zap:
   level: 0
   logspath: ./logs/go.log

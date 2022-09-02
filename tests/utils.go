@@ -8,17 +8,11 @@ import (
 )
 
 func MigrateDatabase(c context.Context, f database.DbFactory) error {
-	db, err := f.InitDB(c)
+	db, close, err := f.InitDB(c)
 	if err != nil {
 		return err
 	}
-
-	conn, err := db.DB()
-	if err != nil {
-		return err
-	}
-
-	defer conn.Close()
+	defer close()
 
 	err = db.Migrator().DropTable(&model.Password{})
 	if err != nil {
