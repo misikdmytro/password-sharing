@@ -86,7 +86,7 @@ func (s *passwordService) CreateLinkFromPassword(c context.Context, password str
 
 	encoded, err := s.encoder.Encode(password)
 	if err != nil {
-		const message = "failed on encodingg"
+		const message = "failed on encoding"
 
 		appLogger.Error(message)
 
